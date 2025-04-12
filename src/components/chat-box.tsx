@@ -76,6 +76,11 @@ const Chatbot = () => {
     setConversation((prev) => [...prev, userMesage]);
     setHasStartedChat(true);
 
+    // 入力欄をクリア
+    if (inputRef.current) {
+      inputRef.current.textContent = "";
+    }
+
     try {
       const { newMessage } = await chat([...conversation, userMesage]);
 
@@ -211,26 +216,37 @@ const Chatbot = () => {
             <div
               contentEditable
               role="textbox"
-              onInput={(e) => {
+              onCompositionEnd={(e) => {
+                // 日本語入力確定時の処理
                 setInput(e.currentTarget.textContent || "");
               }}
+              onInput={(e) => {
+                // 通常の入力処理
+                const event = e.nativeEvent as any;
+                if (!event.isComposing) {
+                  setInput(e.currentTarget.textContent || "");
+                }
+              }}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                const event = e.nativeEvent as any;
+                if (e.key === "Enter" && !e.shiftKey && !event.isComposing) {
                   e.preventDefault();
-                  handleSend();
+                  if (input.trim()) {
+                    handleSend();
+                  }
                 }
               }}
               data-placeholder="Message..."
-              className="flex-1 min-h-[36px] overflow-y-auto px-3 py-2 focus:outline-none text-sm bg-background rounded-md empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)] whitespace-pre-wrap break-words"
-              ref={(element) => {
-                inputRef.current = element;
-                if (element && !input) {
-                  element.textContent = "";
-                }
-              }}
+              className="flex-1 min-h-[36px] max-h-[120px] overflow-y-auto px-3 py-2 focus:outline-none text-sm bg-background rounded-md empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)] whitespace-pre-wrap break-words"
+              ref={inputRef}
             />
 
-            <Button size="icon" className="rounded-full shrink-0 mb-0.5">
+            <Button
+              size="icon"
+              className="rounded-full shrink-0 mb-0.5"
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
+            >
               <ArrowUpIcon strokeWidth={2.5} className="size-5" />
             </Button>
           </motion.div>
